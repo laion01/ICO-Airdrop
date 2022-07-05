@@ -1,8 +1,16 @@
 # BEP20 IYAL Token
 
+Create a new token(BEP20: IYAL) and ICO Smart contract with airdrop functionality.
+
+```shell
 npx hardhat compile
+```
+```shell
 npx hardhat run scripts/deploy.js --network bsctestnet
+```
+```shell
 npx hardhat verify 0xab0----------c0 --network bsctestnet
+```
 
 ### 1. hardhat write config
 Get the APIkey address under [ethScan](https://etherscan.io/myapikey) or [bscScan](https://bscscan.com/myapikey) personal information 
