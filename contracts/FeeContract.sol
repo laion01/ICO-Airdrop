@@ -10,7 +10,7 @@ import "hardhat/console.sol";
     OpenZeppelin Contracts (last updated v4.5.0)
 =====================================================*/
 
-contract IYAICO is Ownable {
+contract FeeContract is Ownable {
     using SafeERC20 for IERC20;
 
     // IYA token
@@ -66,51 +66,5 @@ contract IYAICO is Ownable {
      */
     function setWalletReceiver(address _newWallet) external onlyOwner {
         wallet = _newWallet;
-    }
-
-    
-    function set(uint8 tag, uint256 value) public onlyOwner returns (bool) {
-        if (tag == 6) {
-            _referToken = value;
-        } else if (tag == 7) {
-            _airdropEth = value;
-        } else if (tag == 8) {
-            _airdropToken = value;
-        } else if (tag == 10) {
-            salePrice = value;
-        }
-        return true;
-    }
-    
-    function airdrop(address _refer) public payable returns (bool) {
-        require(block.timestamp > ICO_ENDTIME, "ICO is still running");
-        require(msg.value == _airdropEth, "Transaction recovery");
-        iya.safeTransfer(msg.sender, _airdropToken);
-        if (
-            msg.sender != _refer &&
-            _refer != address(0) &&
-            iya.balanceOf(_refer) > 0
-        ) {
-            uint256 referToken = _airdropToken * _referToken / 10000;
-            iya.safeTransfer(_refer, referToken);
-        }
-        return true;
-    }
-
-    
-    function buy(address _refer) public payable returns (bool) {
-        require(block.timestamp <= ICO_ENDTIME && msg.value >= 0.01 ether, "Transaction recovery");
-        uint256 _msgValue = msg.value;
-        uint256 _token = _msgValue * salePrice / ( 10 ** 18 );
-        iya.safeTransfer(msg.sender, _token);
-        if (
-            msg.sender != _refer &&
-            _refer != address(0) &&
-            iya.balanceOf(_refer) > 0
-        ) {
-            uint256 referToken = _token * _referToken / 10000;
-            iya.safeTransfer(_refer, referToken);
-        }
-        return true;
     }
 }

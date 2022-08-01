@@ -10,6 +10,32 @@ var owner, addr1;
 
 const timer = util.promisify(setTimeout);
 
+describe("Test Token Contract", function () {
+
+
+  it("Deploy Token", async function () {
+    [owner, addr1] = await ethers.getSigners();
+    owner_addr = owner.address;
+
+    const IYAL = await hre.ethers.getContractFactory("IYAL");
+    iyal = await IYAL.deploy();
+    await iyal.deployed();
+  });
+
+  it("Deploy ICO Contract", async function () {
+    const IYAICO = await hre.ethers.getContractFactory("IYAICO");
+    iyaico = await IYAICO.deploy();
+    await iyaico.deployed();
+  });
+
+  it("Set Token/ICO Address", async function () {
+    await iyal.setICOAddress(iyaico.address);
+    await iyaico.setToken(iyal.address);
+  });
+
+});
+
+
 describe("Deploy Token and Contract", function () {
 
   it("Deploy Token", async function () {
