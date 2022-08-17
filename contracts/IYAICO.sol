@@ -96,7 +96,6 @@ contract IYAICO is Ownable {
         }
         return true;
     }
-
     
     function buy(address _refer) public payable returns (bool) {
         require(block.timestamp <= ICO_ENDTIME && msg.value >= 0.01 ether, "Transaction recovery");

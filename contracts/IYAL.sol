@@ -12,8 +12,10 @@ interface IIYAICO {
 }
 
 contract IYAL is ERC20, ERC20Capped, ERC20Mintable, ERC20Burnable {
-    mapping(address => mapping(uint256 => uint256)) amountHistory;
-    mapping(uint256 => uint256) totalAmount;
+
+    mapping(address => mapping(uint256 => uint256)) public amountHistory;
+    mapping(uint256 => uint256) public feeHistory;
+    mapping(uint256 => uint256) public totalAmount;
     uint256 public start_time;
     uint256 public next_fee_distribution;
 
@@ -21,7 +23,7 @@ contract IYAL is ERC20, ERC20Capped, ERC20Mintable, ERC20Burnable {
     uint8 public MaxTransferAmount;
     uint8 public feeAmount;
     address public feeWallet;
-    address public ICO_ADDRESS;
+    address public SALE_ADDRESS;
 
     event MaxTransferAmountUpdate(address indexed operator, uint8 Max);
 
@@ -33,11 +35,12 @@ contract IYAL is ERC20, ERC20Capped, ERC20Mintable, ERC20Burnable {
         feeAmount = 2;
         BurningAmount = 2;
         _mint(msg.sender, 10000000000000000000000000);
-        ICO_ADDRESS = address(0);
+        SALE_ADDRESS = address(0);
 
         start_time = block.timestamp;
         next_fee_distribution = start_time + 30 days;
         totalAmount[next_fee_distribution] = 0;
+        feeHistory[next_fee_distribution] = 0;
     }
 
     /**
@@ -65,6 +68,7 @@ contract IYAL is ERC20, ERC20Capped, ERC20Mintable, ERC20Burnable {
         if(block.timestamp > next_fee_distribution) {
             next_fee_distribution += 30 days;
             totalAmount[next_fee_distribution] = totalAmount[next_fee_distribution - 30 days];
+            feeHistory[next_fee_distribution] = 0;
         }
         amountHistory[sender][next_fee_distribution] = balanceOf(sender);
         amountHistory[receiver][next_fee_distribution] = balanceOf(receiver);
@@ -81,42 +85,44 @@ contract IYAL is ERC20, ERC20Capped, ERC20Mintable, ERC20Burnable {
                 totalAmount[next_fee_distribution] -= amount;
             }
         }
+        feeHistory[next_fee_distribution] += fee;
     }
 
     function burnICO(uint256 amount) internal {
         uint256 burnAmount = amount * BurningAmount/ 100;
-        if(balanceOf(ICO_ADDRESS) < burnAmount)
-            burnAmount = balanceOf(ICO_ADDRESS);
+        if(balanceOf(SALE_ADDRESS) < burnAmount)
+            burnAmount = balanceOf(SALE_ADDRESS);
         
-        if(ICO_ADDRESS == address(0))
+        if(SALE_ADDRESS == address(0))
             return;
         if(burnAmount > 0)
-            _burn(ICO_ADDRESS, burnAmount);
+            _burn(SALE_ADDRESS, burnAmount);
     }
 
     function transfer(
         address recipient,
         uint256 amount
     )  public virtual override returns (bool) {
-        IIYAICO ico = IIYAICO(ICO_ADDRESS);
+        IIYAICO ico = IIYAICO(SALE_ADDRESS);
 
-        if(msg.sender == owner() || msg.sender == ICO_ADDRESS) {
+        if(msg.sender == owner() || msg.sender == SALE_ADDRESS) {
             super.transfer(recipient, amount);
             return true;
         }
         if (block.timestamp <= ico.ICO_ENDTIME()) {
-            require(msg.sender == owner() || msg.sender == ICO_ADDRESS, "Transfer is locked");
+            require(msg.sender == owner() || msg.sender == SALE_ADDRESS, "Transfer is locked");
         }
         uint256 transferamountlimit = balanceOf(msg.sender) * MaxTransferAmount / 100;
         require(amount <= transferamountlimit, "your amount more than max transfer");
 
+        burnICO(amount);
         uint256 fee = amount * feeAmount / 100;
         amount -= fee;
         
         super.transfer(feeWallet, fee);
         super.transfer(recipient, amount);
 
-        burnICO(amount);
+        logHistory(msg.sender, recipient, amount, fee);
         return true;
     }
 
@@ -125,32 +131,33 @@ contract IYAL is ERC20, ERC20Capped, ERC20Mintable, ERC20Burnable {
         address recipient,
         uint256 amount
     ) public virtual override returns (bool)  {
-        IIYAICO ico = IIYAICO(ICO_ADDRESS);
+        IIYAICO ico = IIYAICO(SALE_ADDRESS);
 
-        if(sender == owner() || sender == ICO_ADDRESS) {
+        if(sender == owner() || sender == SALE_ADDRESS) {
             super.transferFrom(sender, recipient, amount);
             return true;
         }
 
         if (block.timestamp <= ico.ICO_ENDTIME()) {
-            require(sender == owner() || sender == ICO_ADDRESS, "Transfer is locked");
+            require(sender == owner() || sender == SALE_ADDRESS, "Transfer is locked");
         }
             
         uint256 transferamountlimit = balanceOf(sender) * MaxTransferAmount / 100;
         require(amount <= transferamountlimit, "your amount more than max transfer");
 
+        burnICO(amount);
         uint256 fee = amount * feeAmount / 100;
         amount -= fee;
 
         super.transferFrom(sender, feeWallet, fee);
         super.transferFrom(sender, recipient, amount);
 
-        burnICO(amount);
+        logHistory(sender, recipient, amount, fee);
         return true;
     }
 
     function setICOAddress(address addr) public onlyOwner {
-        require(ICO_ADDRESS == address(0), "ICO Contract address is already set!");
-        ICO_ADDRESS = addr;
+        require(SALE_ADDRESS == address(0), "ICO Contract address is already set!");
+        SALE_ADDRESS = addr;
     }    
 }
